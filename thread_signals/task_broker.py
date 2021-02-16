@@ -59,3 +59,5 @@ class Task_broker():
 
         return res
 
+def get_thread_broker():
+    return Task_broker.get_task_broker(threading.get_ident())
