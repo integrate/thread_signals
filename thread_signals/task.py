@@ -73,12 +73,60 @@ class Task(threading.Event):
 
 
 class TaskFuncRun(Task):
+    def _save_args(self, func, args, kwargs):
+        args=[*args]
+        kwargs={**kwargs}
+
+        # save callable params without serializing
+        new_args = []
+        for i in range(0, len(args)):
+            val = args[i]
+            if not callable(val):
+                new_args.append(None)
+            else:
+                new_args.append(val)
+                args[i] = None
+
+        new_kwargs = {}
+        for (i, val) in kwargs.items():
+            if not callable(val):
+                new_kwargs[i] = None
+            else:
+                new_kwargs[i] = val
+                kwargs[i] = None
+
+        return [func, new_args, new_kwargs], [args, kwargs]
+
+    def _load_args(self, not_serialized, serialized):
+        func = not_serialized[0]
+
+        callable_args = not_serialized[1]
+        callable_kwargs = not_serialized[2]
+
+        cleared_args = serialized[0]
+        cleared_kwargs = serialized[1]
+
+        for i in range(0, len(callable_args)):
+            callable_val = callable_args[i]
+            if callable_val is None:
+                continue
+
+            cleared_args[i] = callable_val
+
+        for (i, callable_val) in callable_kwargs.items():
+            if callable_val is None:
+                continue
+            cleared_kwargs[i] = callable_val
+
+        return [func, cleared_args, cleared_kwargs]
+
     def __init__(self, executor_thread_id, func, args, kwargs):
-        Task.__init__(self, executor_thread_id, func, [args, kwargs])
+
+        not_serialized, serialized = self._save_args(func, args, kwargs)
+
+        Task.__init__(self, executor_thread_id, not_serialized, serialized)
 
     def _do_task(self, not_serialized_data, serialized_data):
-        func = not_serialized_data
-        args = serialized_data[0]
-        kwargs = serialized_data[1]
+        func, args, kwargs = self._load_args(not_serialized_data, serialized_data)
         return func(*args, **kwargs)
 

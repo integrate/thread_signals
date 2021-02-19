@@ -1,4 +1,4 @@
-import threading, time
+import time
 from thread_signals import get_func_patcher, LateStartThread, get_thread_broker, interface_patcher
 
 
@@ -7,13 +7,11 @@ class interface():
 
     @staticmethod
     def hahaha():
-        print(threading.get_ident())
         print('Real hahaha')
-        a=3/0
+        # a=3/0
 
     @staticmethod
     def hohoho(t1, t2, t3):
-        print(threading.get_ident())
         print('Real hohoho', t1, t2, t3)
 
 
