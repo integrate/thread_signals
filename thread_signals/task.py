@@ -59,7 +59,11 @@ class Task(threading.Event):
         if self._excdata is None:
             return None
 
-        return pickle.loads(self._excdata)
+        #re create exception object
+        exc_data =  pickle.loads(self._excdata)
+        exc_obj = exc_data[0](exc_data[1])
+        exc_obj.with_traceback(exc_data[2])
+        return exc_obj
 
     def get_result(self):
         if not self.is_set():

@@ -9,20 +9,24 @@ class Task_broker():
         self._task_list = []
         self._task_list_lock = threading.RLock()
 
-    def _add_task_to_queue_and_wait(self, task, timeout):
+    def _add_task_to_queue_and_wait(self, task, timeout, sync_call = True):
         #add task to list
         with self._task_list_lock:
             self._task_list.append(task)
 
-        #wait for execution
+        #nothing to wait
+        if not sync_call:
+            return
+
+        #wait for execution if sync call
         res = task.wait(timeout)
         if not res: return False
 
         return (task.is_successful(), task.get_result(), task.get_exception())
 
-    def run_func_as_task(self, func, args, kwargs, timeout):
+    def run_func_as_task(self, func, args, kwargs, timeout, sync_call = True):
         t = TaskFuncRun(self._executor_thread_id, func, args, kwargs)
-        return self._add_task_to_queue_and_wait(t, timeout)
+        return self._add_task_to_queue_and_wait(t, timeout, sync_call)
 
     def _get_earliest_task(self):
         with self._task_list_lock:
@@ -34,13 +38,18 @@ class Task_broker():
 
         return t
 
-    def run_all_tasks(self):
+    def _run_task(self, task, reraise_error = False):
+        task.run_task()
+        if reraise_error and not task.is_successful():
+            raise task.get_exception()
+
+    def run_all_tasks(self, reraise_error = False):
         if threading.get_ident() != self._executor_thread_id:
             raise Exception('Tasks could only be run from execution thread!')
 
         t = self._get_earliest_task()
         while t is not None:
-            t.run_task()
+            self._run_task(t, reraise_error)
             t = self._get_earliest_task()
 
 

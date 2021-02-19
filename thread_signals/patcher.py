@@ -2,14 +2,14 @@ import threading
 from thread_signals.task_broker import Task_broker
 
 
-def get_func_patcher(executor_thread_id, timeout):
+def get_func_patcher(executor_thread_id, timeout, sync_call = True):
     def func_patcher(orig_func):
-        return simple_func_patcher(orig_func, executor_thread_id, timeout)
+        return simple_func_patcher(orig_func, executor_thread_id, timeout, sync_call)
 
     return func_patcher
 
 
-def simple_func_patcher(orig_func, executor_thread_id, timeout):
+def simple_func_patcher(orig_func, executor_thread_id, timeout, sync_call = True):
     def patched_func(*args, **kwargs):
         if threading.get_ident() == executor_thread_id:
             return orig_func(*args, **kwargs)
@@ -18,16 +18,19 @@ def simple_func_patcher(orig_func, executor_thread_id, timeout):
         #     [str(i) for i in args] + [str(name) + "=" + str(value) for (name, value) in kwargs.items()]) + ")")
 
         broker = Task_broker.get_task_broker(executor_thread_id)
-        res = broker.run_func_as_task(orig_func, args, kwargs, timeout)
+        res = broker.run_func_as_task(orig_func, args, kwargs, timeout, sync_call)
+
+        #nothing to wait
+        if not sync_call:
+            return
+
+        #analyze response if sync call
         if type(res) is bool:
             raise Exception("Command {fnc_name} not run in {timeout} seconds".format(fnc_name=orig_func.__name__,
                                                                                      timeout=str(timeout)))
 
         if res[0] is False:
-            exc_data = res[2]
-            exc_obj = exc_data[0](exc_data[1])
-            exc_obj.with_traceback(exc_data[2])
-            raise exc_obj
+            raise res[2]
         else:
             return res[1]
 
