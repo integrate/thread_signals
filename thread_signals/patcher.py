@@ -24,9 +24,36 @@ def simple_func_patcher(orig_func, executor_thread_id, timeout):
                                                                                      timeout=str(timeout)))
 
         if res[0] is False:
-            raise res[2]
+            exc_data = res[2]
+            exc_obj = exc_data[0](exc_data[1])
+            exc_obj.with_traceback(exc_data[2])
+            raise exc_obj
         else:
             return res[1]
 
 
     return patched_func
+
+
+def interface_patcher(interface_class, executor_thread, timeout):
+    #get name
+    if not isinstance(interface_class, type):
+        raise Exception("Interface must be type object!")
+
+    new_name = interface_class.__name__
+
+    #make attrs
+    patcher = get_func_patcher(executor_thread, timeout)
+    attrs = {}
+    for att_name in vars(interface_class):
+        if att_name.startswith("_"):
+            continue
+
+        attr_val = getattr(interface_class, att_name)
+        if not callable(attr_val):
+            continue
+
+        attrs[att_name] = patcher(attr_val)
+
+    new_class = type(new_name, (object,), attrs)
+    return new_class

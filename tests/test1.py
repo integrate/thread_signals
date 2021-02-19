@@ -1,25 +1,21 @@
 import threading, time
-from thread_signals import get_func_patcher, LateStartThread, get_thread_broker
+from thread_signals import get_func_patcher, LateStartThread, get_thread_broker, interface_patcher
 
 
 
-def get_interface(executor_thread):
+class interface():
 
-    class interface():
+    @staticmethod
+    def hahaha():
+        print(threading.get_ident())
+        print('Real hahaha')
+        a=3/0
 
-        @staticmethod
-        @get_func_patcher(executor_thread, None)
-        def hahaha():
-            print(threading.get_ident())
-            print('Real hahaha')
+    @staticmethod
+    def hohoho(t1, t2, t3):
+        print(threading.get_ident())
+        print('Real hohoho', t1, t2, t3)
 
-        @staticmethod
-        @get_func_patcher(executor_thread, None)
-        def hohoho(t1, t2, t3):
-            print(threading.get_ident())
-            print('Real hohoho', t1, t2, t3)
-
-    return interface
 
 
 
@@ -33,7 +29,7 @@ def run_in_other_thread():
         time.sleep(1 / 10)
 
 t = LateStartThread(target=run_in_other_thread, name="Other thread")
-i = get_interface(t.ident)
+i = interface_patcher(interface, t.ident, None)
 t.start()
 
 i.hahaha()
