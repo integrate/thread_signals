@@ -52,6 +52,10 @@ class Task_broker():
             self._run_task(t, reraise_error)
             t = self._get_earliest_task()
 
+    def get_task_count(self):
+        with self._task_list_lock:
+            res = len(self._task_list)
+        return res
 
     #one broker per thread
     _broker_list_lock = threading.RLock()
@@ -68,5 +72,8 @@ class Task_broker():
 
         return res
 
-def get_thread_broker():
-    return Task_broker.get_task_broker(threading.get_ident())
+def get_thread_broker(thread_ident = None):
+    if thread_ident is None:
+        return Task_broker.get_task_broker(threading.get_ident())
+    else:
+        return Task_broker.get_task_broker(thread_ident)
