@@ -9,10 +9,20 @@ class Task_broker():
         self._task_list = []
         self._task_list_lock = threading.RLock()
 
+        self._task_list_changed_condition = threading.Condition()
+
+    def get_task_list_changed_condition(self):
+        return self._task_list_changed_condition
+
     def _add_task_to_queue_and_wait(self, task, timeout, sync_call = True):
         #add task to list
         with self._task_list_lock:
             self._task_list.append(task)
+
+        # notify task executors about task list changed
+        with self._task_list_changed_condition:
+            self._task_list_changed_condition.notify_all()
+
 
         #nothing to wait
         if not sync_call:
@@ -51,6 +61,10 @@ class Task_broker():
         while t is not None:
             self._run_task(t, reraise_error)
             t = self._get_earliest_task()
+
+        # notify task executors about task list changed
+        with self._task_list_changed_condition:
+            self._task_list_changed_condition.notify_all()
 
     def get_task_count(self):
         with self._task_list_lock:
